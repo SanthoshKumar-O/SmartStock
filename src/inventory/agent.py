@@ -410,53 +410,34 @@ def ask_copilot_agent(
 
         reply_text = ""
 
-        # Path A: Modern google-genai SDK
-        if _GENAI_SDK == "google-genai":
-            client = genai.Client(api_key=api_key)
-            contents = []
-            if conversation_history:
-                for turn in conversation_history[-6:]:
-                    role = "user" if turn.get("role") == "user" else "model"
-                    contents.append(
-                        types.Content(
-                            role=role,
-                            parts=[types.Part.from_text(text=turn.get("content", ""))],
-                        )
-                    )
-            contents.append(
-                types.Content(
-                    role="user",
-                    parts=[types.Part.from_text(text=message)],
-                )
-            )
-
-            response = client.models.generate_content(
-                model=model_name,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.3,
-                ),
-            )
-            reply_text = response.text or ""
-
-        # Path B: Legacy google.generativeai SDK
-        elif _GENAI_SDK == "legacy-genai":
-            legacy_genai.configure(api_key=api_key)
-            safe_model = "gemini-1.5-flash" if "2.5" in model_name else model_name
-            model = legacy_genai.GenerativeModel(
-                model_name=safe_model,
-                system_instruction=system_instruction,
-            )
-            history_list = []
-            if conversation_history:
-                for turn in conversation_history[-6:]:
-                    role = "user" if turn.get("role") == "user" else "model"
-                    history_list.append({"role": role, "parts": [turn.get("content", "")]})
-
-            chat = model.start_chat(history=history_list)
-            resp = chat.send_message(message)
-            reply_text = resp.text or ""
+        import requests
+        
+        model_ver = "gemini-1.5-flash" if "2.5" in model_name else model_name
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_ver}:generateContent?key={api_key}"
+        
+        contents = []
+        if conversation_history:
+            for turn in conversation_history[-6:]:
+                role = "user" if turn.get("role") == "user" else "model"
+                contents.append({"role": role, "parts": [{"text": str(turn.get("content", ""))}]})
+        
+        contents.append({"role": "user", "parts": [{"text": message}]})
+        
+        payload = {
+            "system_instruction": {"parts": [{"text": system_instruction}]},
+            "contents": contents,
+            "generationConfig": {"temperature": 0.3}
+        }
+        
+        resp = requests.post(url, json=payload, timeout=12)
+        if not resp.ok:
+            raise Exception(f"Gemini API Error {resp.status_code}: {resp.text}")
+            
+        data = resp.json()
+        try:
+            reply_text = data["candidates"][0]["content"]["parts"][0]["text"]
+        except (KeyError, IndexError):
+            reply_text = ""
 
         if not reply_text:
             reply_text = generate_fallback_response(message, df, referenced)
@@ -470,6 +451,8 @@ def ask_copilot_agent(
         }
 
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
         # Fall back smoothly on any API error (network timeout, rate limit, invalid key)
         fallback_reply = generate_fallback_response(message, df, referenced)
         return {
