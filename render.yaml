@@ -1,0 +1,37 @@
+services:
+  # ---------------------------------------------
+  # Python Backend Server
+  # ---------------------------------------------
+  - type: web
+    name: smartstock-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn src.api.server:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0 # Force a specific Python version to avoid build instability
+      - key: GEMINI_API_KEY
+        sync: false # You must populate this manually in the Render web dashboard!
+
+  # ---------------------------------------------
+  # React Frontend (Static Site)
+  # ---------------------------------------------
+  - type: web # Using 'web' with env 'static' constructs Render's high-speed global CDN
+    name: smartstock-frontend
+    env: static
+    buildCommand: "cd frontend && npm install && npm run build"
+    staticPublishPath: "./frontend/dist"
+    
+    # Render's Edge Routing
+    routes:
+      # 1. API proxy rule: Catch all fetch('/api/...') traffic and transparently 
+      # forward it to the Python backend to avoid CORS restrictions on the client side.
+      - type: rewrite
+        source: /api/*
+        destination: https://smartstock-backend.onrender.com/api/*
+        
+      # 2. React Router SPA fallback: Any frontend route that isn't a static asset 
+      # gets pointed back to index.html to allow React to mount and parse the URL.
+      - type: rewrite
+        source: /*
+        destination: /index.html
