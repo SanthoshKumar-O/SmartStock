@@ -1,0 +1,16 @@
+product_id,name,category,lead_time_days,current_stock,on_order,unit_cost
+P001,Milk 1L,Dairy,2,260,0,28
+P002,Bread Loaf,Bakery,1,150,0,25
+P003,Basmati Rice 5kg,Staples,4,130,0,420
+P004,Cooking Oil 1L,Staples,4,400,0,140
+P005,Sugar 1kg,Staples,4,200,100,42
+P006,Tea 250g,Beverages,5,300,0,110
+P007,Soft Drink 2L,Beverages,3,250,0,75
+P008,Bottled Water 1L,Beverages,2,1500,0,12
+P009,Biscuits Pack,Snacks,3,420,0,20
+P010,Chocolate Box,Snacks,5,120,0,180
+P011,Sweets Box (Mithai),Festive,4,60,0,260
+P012,Eggs Dozen,Dairy,2,700,0,70
+P013,Detergent 1kg,Household,6,150,0,190
+P014,Ice Cream Tub,Frozen,3,90,0,150
+P015,Instant Noodles,Snacks,3,260,0,14
